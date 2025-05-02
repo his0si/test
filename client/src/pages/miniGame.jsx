@@ -1,6 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import styled from 'styled-components';
 import AuthModal from '../components/AuthModal';
+import GameOverModal from '../components/GameOverModal';
 import { useNavigate } from 'react-router-dom';
 
 import dino0 from '../assets/dino0.png';
@@ -90,6 +91,13 @@ const GameCanvas = styled.canvas`
   max-width: 100%;
   height: auto;
   touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 `;
 
 const ScoreDisplay = styled.div`
@@ -98,66 +106,17 @@ const ScoreDisplay = styled.div`
   font-weight: bold;
   color: #4eff4e;
   text-shadow: 0 0 10px rgba(78, 255, 78, 0.5);
-`;
-
-const GameOver = styled.div`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: rgba(0, 0, 0, 0.8);
-  color: #4eff4e;
-  padding: clamp(10px, 2vw, 15px);
-  border-radius: 8px;
-  text-align: center;
-  display: ${props => props.show ? 'block' : 'none'};
-  width: 80%;
-  max-width: 300px;
-  text-shadow: 0 0 10px rgba(78, 255, 78, 0.5);
-  border: 1px solid #4eff4e;
-  box-shadow: 0 0 10px rgba(78, 255, 78, 0.3);
-
-  h2 {
-    font-size: clamp(18px, 4vw, 24px);
-    margin-bottom: 10px;
-  }
-
-  p {
-    font-size: clamp(14px, 3vw, 18px);
-    margin-bottom: 15px;
-  }
-
-  // 모바일 세로 화면에서 더 작게
-  @media (max-width: 480px) and (orientation: portrait) {
-    width: 90%;
-    max-width: 220px;
-    padding: 8px;
-    h2 {
-      font-size: 16px;
-    }
-    p {
-      font-size: 12px;
-    }
-  }
-`;
-
-const RestartButton = styled.button`
-  margin-top: 15px;
-  padding: clamp(6px, 1.5vw, 8px) clamp(12px, 2.5vw, 15px);
-  background-color: #4eff4e;
-  color: black;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: clamp(12px, 3vw, 14px);
-  font-weight: bold;
-  
-  &:hover {
-    background-color: #45ff45;
-  }
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 `;
 
 const GameBoxWrapper = styled.div`
+  position: relative;
   width: 90%;
   max-width: 800px;
   margin: 0 auto 50px auto;
@@ -198,6 +157,13 @@ const LeaderboardButton = styled.button`
   font-size: 16px;
   transition: all 0.3s ease;
   z-index: 2;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
   
   &:hover {
     background-color: #4eff4e;
@@ -352,6 +318,8 @@ const MiniGame = () => {
   const [showAuthModal, setShowAuthModal] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const navigate = useNavigate();
+  const [isTouching, setIsTouching] = useState(false);
+  const animationRef = useRef(null);
 
   const dinoSources = [dino0, dino1, dino2, dino3, dino4, dino5, dino6, dino7, dino8, dino9, dino10, dino11];
   const legoSources = [lego0, lego1, lego2, lego3];
@@ -447,7 +415,7 @@ const MiniGame = () => {
     );
   };
 
-  const handleJump = () => {
+  const handleJump = useCallback(() => {
     if (!gameStarted) {
       setGameStarted(true);
       return;
@@ -458,7 +426,7 @@ const MiniGame = () => {
     
     game.dino.jumping = true;
     game.dino.jumpStartTime = Date.now();
-  };
+  }, [gameStarted, gameOver]);
 
   const handleAuth = (userData) => {
     console.log('Auth successful:', userData);
@@ -566,6 +534,7 @@ const MiniGame = () => {
   };
 
   const handleRestart = (e) => {
+    e.preventDefault();
     e.stopPropagation();
     setScore(0);
     setGameOver(false);
@@ -607,12 +576,48 @@ const MiniGame = () => {
   };
 
   const handleTouchStart = (e) => {
+    if (showAuthModal || e.target.closest('button')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsTouching(true);
     handleJump();
+  };
+
+  const handleTouchMove = (e) => {
+    if (showAuthModal || e.target.closest('button')) return;
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleTouchEnd = (e) => {
+    if (showAuthModal || e.target.closest('button')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setIsTouching(false);
   };
 
   useEffect(() => {
     initGame();
   }, []);
+
+  useEffect(() => {
+    const animateJump = () => {
+      if (isTouching && !showAuthModal) {
+        handleJump();
+      }
+      animationRef.current = requestAnimationFrame(animateJump);
+    };
+
+    if (isTouching && !showAuthModal) {
+      animationRef.current = requestAnimationFrame(animateJump);
+    }
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isTouching, showAuthModal]);
 
   useEffect(() => {
     if (gameStarted && !gameOver && imagesLoaded) {
@@ -626,11 +631,21 @@ const MiniGame = () => {
     window.addEventListener('resize', resizeCanvas);
     window.addEventListener('orientationchange', resizeCanvas);
 
+    // Add keyboard event listener
+    const handleKeyDown = (e) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') {
+        e.preventDefault(); // Prevent page scroll on space
+        handleJump();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       window.removeEventListener('resize', resizeCanvas);
       window.removeEventListener('orientationchange', resizeCanvas);
+      window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [handleJump]);
 
   useEffect(() => {
     document.body.style.backgroundColor = '#000';
@@ -650,13 +665,17 @@ const MiniGame = () => {
     <GameContainer 
       onClick={handleJump}
       onTouchStart={handleTouchStart}
-      onTouchMove={(e) => e.stopPropagation()}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       style={{ margin: 0, padding: 0 }}
     >
-      <LeaderboardButton onClick={(e) => {
-        e.stopPropagation();
-        navigate('/leaderboard');
-      }}>
+      <LeaderboardButton 
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          navigate('/leaderboard');
+        }}
+      >
         Leaderboard 🏆
       </LeaderboardButton>
       <ScoreDisplay>Score: {score}</ScoreDisplay>
@@ -667,19 +686,13 @@ const MiniGame = () => {
           width={800}
           height={300}
         />
+        <GameOverModal 
+          show={gameOver}
+          score={score}
+          currentUser={currentUser}
+          onRestart={handleRestart}
+        />
       </GameBoxWrapper>
-      <GameOver show={gameOver}>
-        <h2>Game Over!</h2>
-        <p>Final Score: {score}</p>
-        {!currentUser && (
-          <LoginNotice>
-            로그인하면 점수가 저장됩니다!
-          </LoginNotice>
-        )}
-        <RestartButton onClick={handleRestart}>
-          Restart
-        </RestartButton>
-      </GameOver>
       {showAuthModal && (
         <AuthModal
           onClose={() => setShowAuthModal(false)}
